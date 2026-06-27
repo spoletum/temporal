@@ -1,0 +1,72 @@
+﻿@page "/"
+@page "/workflows"
+@inject WorkflowRunner Runner
+@inject IEnumerable<IWorkflowDefinition> Definitions
+
+<PageTitle>Workflows · PayR.Temporal</PageTitle>
+
+<h1>Workflows</h1>
+<p class="text-muted">Start and observe Temporal workflows registered with this UI.</p>
+
+@if (Definitions is null || !Definitions.Any())
+{
+    <div class="alert alert-warning">
+        No workflow definitions are registered. Add one in
+        <code>Program.cs</code> via
+        <code>services.AddSingleton&lt;IWorkflowDefinition, YourDefinition&gt;()</code>.
+    </div>
+}
+else
+{
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        @foreach (var def in Definitions)
+        {
+            var active = Selected?.Id == def.Id;
+            <button type="button"
+                    class="btn @(active ? "btn-primary" : "btn-outline-primary")"
+                    @onclick="() => Select(def)">
+                @def.DisplayName
+            </button>
+        }
+    </div>
+
+    if (Selected is not null)
+    {
+        <WorkflowRunnerForm Definition="Selected"
+                            OnRun="RunAsync"
+                            LastResult="lastResult"
+                            IsRunning="isRunning" />
+    }
+}
+
+@code {
+    private IWorkflowDefinition? Selected { get; set; }
+    private bool isRunning;
+    private WorkflowRunResult? lastResult;
+
+    protected override void OnInitialized()
+    {
+        Selected = Definitions.FirstOrDefault();
+    }
+
+    private void Select(IWorkflowDefinition def)
+    {
+        Selected = def;
+        lastResult = null;
+    }
+
+    private async Task RunAsync(IReadOnlyDictionary<string, string?> form)
+    {
+        if (Selected is null) return;
+        isRunning = true;
+        lastResult = null;
+        try
+        {
+            lastResult = await Runner.RunAsync(Selected, form);
+        }
+        finally
+        {
+            isRunning = false;
+        }
+    }
+}

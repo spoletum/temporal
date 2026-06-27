@@ -1,15 +1,17 @@
-﻿using Temporalio.Activities;
+﻿using PayR.Temporal.SayHello.Client;
+using Temporalio.Activities;
 using Temporalio.Client;
 using Temporalio.Worker;
 using Temporalio.Workflows;
 
-// A trivial workflow + activity so the worker has something to register.
-// Replace these with real PayR workflows as the project grows.
+// The worker owns the workflow and activity *implementations*. The input
+// contract and workflow identity (name + task queue) live in
+// PayR.Temporal.SayHello.Client, shared with callers.
 
 var temporalAddress = Environment.GetEnvironmentVariable("TEMPORAL_ADDRESS") ?? "localhost:7233";
 
 var activities = new PayRActivities();
-var workerOptions = new TemporalWorkerOptions(taskQueue: "payr-task-queue")
+var workerOptions = new TemporalWorkerOptions(taskQueue: SayHelloWorkflow.TaskQueue)
     .AddAllActivities(activities)
     .AddWorkflow<PayRGreetingWorkflow>();
 
@@ -25,24 +27,29 @@ Console.CancelKeyPress += (_, e) =>
     cts.Cancel();
 };
 
-Console.WriteLine($"PayR.Temporal.SayHello.Worker starting on task queue 'payr-task-queue' (connecting to {temporalAddress})...");
+Console.WriteLine($"PayR.Temporal.SayHello.Worker starting on task queue '{SayHelloWorkflow.TaskQueue}' (connecting to {temporalAddress})...");
 await worker.ExecuteAsync(cts.Token);
 Console.WriteLine("Worker stopped.");
 
+/// <summary>Activities invoked by <see cref="PayRGreetingWorkflow"/>.</summary>
 public sealed class PayRActivities
 {
     [Activity]
     public string SayHello(string name) => $"Hello, {name}! — from PayR.Temporal.SayHello.Worker";
 }
 
-[Workflow]
+/// <summary>
+/// Sample greeting workflow. Accepts a <see cref="SayHelloInput"/>, calls the
+/// <see cref="PayRActivities.SayHello"/> activity, and returns the greeting.
+/// </summary>
+[Workflow(SayHelloWorkflow.Name)]
 public sealed class PayRGreetingWorkflow
 {
     [WorkflowRun]
-    public async Task<string> RunAsync(string name)
+    public async Task<string> RunAsync(SayHelloInput input)
     {
         var message = await Workflow.ExecuteActivityAsync(
-            (PayRActivities a) => a.SayHello(name),
+            (PayRActivities a) => a.SayHello(input.Name),
             new ActivityOptions { StartToCloseTimeout = TimeSpan.FromSeconds(30) });
 
         return message;

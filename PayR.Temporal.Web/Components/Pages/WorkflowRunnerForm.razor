@@ -1,0 +1,91 @@
+@using PayR.Temporal.Web.Workflows
+
+<div class="card">
+    <div class="card-header">
+        <strong>@Definition.DisplayName</strong>
+        <span class="badge bg-secondary ms-2">@Definition.WorkflowType</span>
+        <span class="badge bg-info text-dark ms-1">@Definition.TaskQueue</span>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">@Definition.Description</p>
+
+        <EditForm Model="this" OnValidSubmit="SubmitAsync" FormName="workflow_form">
+            @foreach (var field in Definition.Fields)
+            {
+                <WorkflowFieldInput Field="field" Model="values[field.Name]" />
+            }
+
+            <button type="submit"
+                    class="btn btn-success"
+                    disabled="@IsRunning">
+                @if (IsRunning)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    @:Running...
+                }
+                else
+                {
+                    <span class="bi bi-play-fill me-1"></span> @:Run
+                }
+            </button>
+        </EditForm>
+
+        @if (LastResult is not null)
+        {
+            <hr />
+            <div class="alert @(LastResult.Error is null ? "alert-success" : "alert-danger")">
+                <div class="d-flex justify-content-between align-items-center">
+                    <strong>@LastResult.Status</strong>
+                    <small class="text-muted">
+                        Workflow ID: <code>@LastResult.WorkflowId</code>
+                        @if (!string.IsNullOrEmpty(LastResult.RunId))
+                        {
+                            <span class="ms-2">Run: <code>@LastResult.RunId</code></span>
+                        }
+                    </small>
+                </div>
+                @if (LastResult.Error is not null)
+                {
+                    <pre class="mb-0 mt-2"><code>@LastResult.Error</code></pre>
+                }
+                else if (LastResult.ResultText is not null)
+                {
+                    <pre class="mb-0 mt-2"><code>@LastResult.ResultText</code></pre>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IWorkflowDefinition Definition { get; set; } = default!;
+    [Parameter] public bool IsRunning { get; set; }
+    [Parameter] public WorkflowRunResult? LastResult { get; set; }
+    [Parameter] public EventCallback<IReadOnlyDictionary<string, string?>> OnRun { get; set; }
+
+    // One FieldValue per declared field, keyed by field name.
+    private readonly Dictionary<string, FieldValue> values = new(StringComparer.OrdinalIgnoreCase);
+
+    protected override void OnParametersSet()
+    {
+        // (Re)initialise when the definition changes.
+        var keys = Definition.Fields.Select(f => f.Name).ToList();
+        if (values.Count == 0 || !values.Keys.SequenceEqual(keys))
+        {
+            values.Clear();
+            foreach (var f in Definition.Fields)
+            {
+                values[f.Name] = new FieldValue { Value = f.DefaultValue };
+            }
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        var form = values.ToDictionary(
+            kv => kv.Key,
+            kv => kv.Value.Value,
+            StringComparer.OrdinalIgnoreCase);
+        await OnRun.InvokeAsync(form);
+    }
+}

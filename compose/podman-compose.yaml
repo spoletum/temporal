@@ -184,6 +184,34 @@ services:
     networks:
       - devnet
 
+  # ---------------------------------------------------------------------------
+  # PayR.Temporal.Web (Blazor UI, hot-reload via dotnet watch)
+  # ---------------------------------------------------------------------------
+  web:
+    image: payr-temporal-web:dev
+    build:
+      context: ..
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      ASPNETCORE_ENVIRONMENT: Development
+      # Override the Temporal connection section via environment variables.
+      Temporal__Address: temporal:7233
+      Temporal__Namespace: default
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    volumes:
+      # Bind-mount the repo root so `dotnet watch` sees source changes.
+      - ..:/app
+      # Keep container-side NuGet cache separate from the host's.
+      - web-nuget:/root/.nuget/packages
+    depends_on:
+      temporal:
+        condition: service_healthy
+    networks:
+      - devnet
+
 networks:
   devnet:
     driver: bridge
@@ -193,3 +221,4 @@ volumes:
   redis-data:
   temporal-data:
   worker-nuget:
+  web-nuget:

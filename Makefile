@@ -28,6 +28,7 @@ REDIS_PASSWORD ?= payr
 SB_HTTP_PORT  ?= 5300
 TEMPORAL_GRPC_PORT ?= 7233
 TEMPORAL_UI_PORT   ?= 8233
+WEB_PORT           ?= 8080
 
 # Default target.
 .DEFAULT_GOAL := help
@@ -107,6 +108,21 @@ worker: ## Build (if needed) and start the PayR.Temporal.SayHello.Worker service
 .PHONY: worker-logs
 worker-logs: ## Tail the worker's logs (Ctrl-C to exit).
 	@$(COMPOSE) $(COMPOSE_ARGS) logs -f worker
+
+.PHONY: web
+web: ## Build (if needed) and start the PayR.Temporal.Web UI with hot-reload.
+	@$(COMPOSE) $(COMPOSE_ARGS) up -d --build web
+	@echo "Web UI starting on http://localhost:$(WEB_PORT). Tail logs with: make web-logs"
+
+.PHONY: web-logs
+web-logs: ## Tail the web UI's logs (Ctrl-C to exit).
+	@$(COMPOSE) $(COMPOSE_ARGS) logs -f web
+
+.PHONY: web-open
+web-open: ## Open the PayR.Temporal.Web UI in the default browser.
+	@command -v xdg-open >/dev/null 2>&1 && xdg-open http://localhost:$(WEB_PORT) \
+		|| command -v open >/dev/null 2>&1 && open http://localhost:$(WEB_PORT) \
+		|| echo "Web UI: http://localhost:$(WEB_PORT)"
 
 # Workflow test helpers. The workflow type and task queue must match what
 # the worker registers (see PayR.Temporal.SayHello.Worker/Program.cs).

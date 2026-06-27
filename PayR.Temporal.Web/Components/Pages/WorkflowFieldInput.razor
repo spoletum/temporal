@@ -1,0 +1,29 @@
+@using PayR.Temporal.Web.Workflows
+
+<div class="mb-3">
+    <label class="form-label" for="@FieldId">@Field.Label</label>
+
+    @switch (Field.Type)
+    {
+        case WorkflowFieldType.Multiline:
+            <InputTextArea id="@FieldId"
+                           class="form-control"
+                           placeholder="@Field.Placeholder"
+                           @bind-Value="Model.Value" />
+            break;
+
+        default:
+            <InputText id="@FieldId"
+                       class="form-control"
+                       placeholder="@Field.Placeholder"
+                       @bind-Value="Model.Value" />
+            break;
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public WorkflowField Field { get; set; } = default!;
+    [Parameter, EditorRequired] public FieldValue Model { get; set; } = default!;
+
+    private string FieldId => $"field-{Field.Name}";
+}

@@ -14,6 +14,7 @@ plus a .NET worker with hot-reload, all via Podman Compose.
 | `redis` | `valkey/valkey:8` | 6379 | Local stand-in for Azure Cache for Redis |
 | `temporal` | `temporalio/temporal:latest` | 7233 (gRPC), 8233 (UI) | Temporal dev server (CLI + UI bundled) |
 | `worker` | built from `Dockerfile.worker` | — | `PayR.Temporal.SayHello.Worker` (.NET 10, hot-reload via `dotnet watch`) |
+| `web` | built from `Dockerfile.web` | 8080 | `PayR.Temporal.Web` Blazor UI (.NET 10, hot-reload via `dotnet watch`) |
 
 ## Prerequisites
 
@@ -54,6 +55,7 @@ The `.env` file is gitignored — never commit real secrets.
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `payr` / `payr` / `payr` | Postgres credentials |
 | `REDIS_PASSWORD` | `payr` | Valkey/Redis AUTH password |
 | `TEMPORAL_GRPC_PORT` / `TEMPORAL_UI_PORT` | `7233` / `8233` | Temporal gRPC and UI ports |
+| `WEB_PORT` | `8080` | PayR.Temporal.Web Blazor UI port |
 | `SB_AMQP_PORT` / `SB_HTTP_PORT` | `5672` / `5300` | Service Bus AMQP and management/health ports |
 
 ## Make targets
@@ -69,6 +71,9 @@ Run `make` (or `make help`) for the full list. The most common ones:
 | `make logs` | Tail logs from all services |
 | `make worker` | (Re)build and start the worker with hot-reload |
 | `make worker-logs` | Tail worker logs |
+| `make web` | (Re)build and start the Blazor Web UI with hot-reload |
+| `make web-logs` | Tail Web UI logs |
+| `make web-open` | Open the Web UI in your browser |
 | `make workflow-start` | Start a sample `PayRGreetingWorkflow` execution |
 | `make workflow-show` | List recent workflow executions |
 | `make temporal-ui` | Open the Temporal Web UI in your browser |
@@ -155,10 +160,20 @@ Or open the Web UI at http://localhost:8233.
 │   ├── podman-compose.yaml      # the full dev stack
 │   ├── servicebus-config.json   # Service Bus entity config (queues/topics)
 │   └── .env.example             # template for compose/.env (gitignored)
+├── PayR.Temporal.SayHello.Client/
+│   ├── PayR.Temporal.SayHello.Client.csproj
+│   ├── SayHelloInput.cs          # input contract (shared)
+│   └── SayHelloWorkflow.cs       # workflow name + task queue constants
 ├── PayR.Temporal.SayHello.Worker/
 │   ├── PayR.Temporal.SayHello.Worker.csproj
-│   └── Program.cs               # sample workflow + activity
+│   └── Program.cs               # workflow + activity implementations
+├── PayR.Temporal.Web/
+│   ├── PayR.Temporal.Web.csproj
+│   ├── Program.cs
+│   ├── Components/              # Blazor UI (Workflows page, form, layout)
+│   └── Workflows/               # IWorkflowDefinition + SayHello adapter
 ├── Dockerfile.worker            # dev image for the worker (dotnet watch)
+├── Dockerfile.web               # dev image for the web UI (dotnet watch)
 ├── Makefile                     # orchestration helpers
 ├── PayR.Temporal.slnx           # .NET solution
 └── .gitignore

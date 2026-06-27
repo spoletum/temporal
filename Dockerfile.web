@@ -1,7 +1,7 @@
-# Development image for PayR.Temporal.SayHello.Worker.
+# Development image for PayR.Temporal.Web.
 #
 # Runs `dotnet watch` so file changes on the host (mounted into the container)
-# trigger a rebuild + restart of the worker automatically.
+# trigger a rebuild + restart of the web UI automatically.
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0
 
@@ -11,8 +11,8 @@ WORKDIR /app
 # Copy all csprojs so project references and package references resolve.
 COPY PayR.Temporal.slnx ./
 COPY PayR.Temporal.SayHello.Client/PayR.Temporal.SayHello.Client.csproj ./PayR.Temporal.SayHello.Client/
-COPY PayR.Temporal.SayHello.Worker/PayR.Temporal.SayHello.Worker.csproj ./PayR.Temporal.SayHello.Worker/
-RUN dotnet restore ./PayR.Temporal.SayHello.Worker/PayR.Temporal.SayHello.Worker.csproj
+COPY PayR.Temporal.Web/PayR.Temporal.Web.csproj ./PayR.Temporal.Web/
+RUN dotnet restore ./PayR.Temporal.Web/PayR.Temporal.Web.csproj
 
 # The rest of the source is bind-mounted at runtime (see podman-compose.yaml),
 # so nothing else needs to be COPYed here for dev.
@@ -20,5 +20,6 @@ RUN dotnet restore ./PayR.Temporal.SayHello.Worker/PayR.Temporal.SayHello.Worker
 ENV DOTNET_USE_POLLING_FILE_WATCHER=1
 ENV DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER=1
 ENV DOTNET_WATCH_SUPPRESS_EMOJIS=1
+ENV ASPNETCORE_ENVIRONMENT=Development
 
-CMD ["dotnet", "watch", "--project", "PayR.Temporal.SayHello.Worker/PayR.Temporal.SayHello.Worker.csproj", "run", "--non-interactive"]
+CMD ["dotnet", "watch", "--project", "PayR.Temporal.Web/PayR.Temporal.Web.csproj", "run", "--non-interactive", "--urls", "http://0.0.0.0:8080"]

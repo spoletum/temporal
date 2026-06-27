@@ -1,3 +1,5 @@
 <Solution>
+  <Project Path="PayR.Temporal.SayHello.Client/PayR.Temporal.SayHello.Client.csproj" />
   <Project Path="PayR.Temporal.SayHello.Worker/PayR.Temporal.SayHello.Worker.csproj" />
+  <Project Path="PayR.Temporal.Web/PayR.Temporal.Web.csproj" />
 </Solution>

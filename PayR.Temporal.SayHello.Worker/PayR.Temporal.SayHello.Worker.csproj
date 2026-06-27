@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\PayR.Temporal.SayHello.Client\PayR.Temporal.SayHello.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Temporalio" Version="1.15.0" />
   </ItemGroup>
 
