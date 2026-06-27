@@ -1,0 +1,103 @@
+# ---------------------------------------------------------------------------
+# .NET
+# ---------------------------------------------------------------------------
+
+## Build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+
+## NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.swp
+*~
+
+## Build logs
+*.log
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+## Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+*.trx
+
+## Publish profiles & local certs
+*.publishproj
+*.publishsettings
+PublishScripts/
+*.pfx
+*.cer
+*.crt
+
+## .NET CLI caches
+.dotnet/
+
+# ---------------------------------------------------------------------------
+# Secrets / local environment
+# ---------------------------------------------------------------------------
+
+.env
+.env.*
+!.env.example
+compose/.env
+
+# ---------------------------------------------------------------------------
+# Temporal dev server local state (SQLite DB, logs)
+# ---------------------------------------------------------------------------
+
+temporal-dev.db
+temporal-dev.db-*
+
+# ---------------------------------------------------------------------------
+# OS junk
+# ---------------------------------------------------------------------------
+
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+
+# ---------------------------------------------------------------------------
+# Editor / IDE caches
+# ---------------------------------------------------------------------------
+
+*.bak
+*.tmp
+*.cache
+*.pidb
+*.swp
+*.swo
+*~
+
+# ---------------------------------------------------------------------------
+# Container runtime local state (shouldn't normally be committed)
+# ---------------------------------------------------------------------------
+
+podman-compose.override.yaml
+docker-compose.override.yml
+docker-compose.override.yaml
