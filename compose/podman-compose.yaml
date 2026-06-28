@@ -199,6 +199,8 @@ services:
       # Override the Temporal connection section via environment variables.
       Temporal__Address: temporal:7233
       Temporal__Namespace: default
+      # Browser-facing URL for the Temporal Web UI (host port, not the in-network address).
+      Temporal__UiUrl: ${TEMPORAL_UI_URL:-http://localhost:8233}
     ports:
       - "${WEB_PORT:-8080}:8080"
     volumes:

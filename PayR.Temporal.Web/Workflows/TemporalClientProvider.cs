@@ -57,4 +57,6 @@ public sealed class TemporalSettings
 {
     public string Address { get; set; } = "localhost:7233";
     public string Namespace { get; set; } = "default";
+    /// <summary>Public Temporal Web UI URL (opened in a new window from the nav).</summary>
+    public string UiUrl { get; set; } = "http://localhost:8233";
 }
