@@ -1,21 +1,16 @@
 # Podman Compose stack for local development.
 #
 # Brings up:
-#   - PayR.Temporal.SayHello.Worker  ........  Temporal worker (hot-reload via dotnet watch)
-#   - PostgreSQL  ............  relational store
-#   - Azure Service Bus emulator  ........  messaging (AMQP 5672, mgmt 5300)
-#   - Redis (Valkey)  ........  cache / pub-sub
 #   - Temporal dev server  ........  workflow orchestration (gRPC 7233, UI 8233)
+#   - PayR.Temporal.SayHello.Worker  ........  Temporal worker (hot-reload via dotnet watch)
+#   - PayR.Temporal.Psp.Validator.Worker / Payout.Worker  ........  PSP workers
+#   - Account / document validation mocks  ........  external HTTP services for the Validator
+#   - PayR.Temporal.Web  ........  Blazor UI (hot-reload via dotnet watch)
 #
 # Usage:
 #   podman compose --file compose/podman-compose.yaml --env-file compose/.env up -d
 #
 # Notes:
-#   * The Service Bus emulator requires SQL Server as a backing store, so a
-#     `mssql` service is included alongside it (per Microsoft's reference
-#     docker-compose). It is not exposed on the host.
-#   * Azure Cache for Redis has no official container image; Valkey (the
-#     open-source Redis successor) is used for local development.
 #   * The worker bind-mounts the repo root so `dotnet watch` can rebuild on
 #     file changes. The image only restores packages; the source comes from
 #     the volume mount.
@@ -23,87 +18,6 @@
 name: payr-temporal-dev
 
 services:
-  # ---------------------------------------------------------------------------
-  # PostgreSQL
-  # ---------------------------------------------------------------------------
-  postgres:
-    image: docker.io/library/postgres:17
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-payr}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payr}
-      POSTGRES_DB: ${POSTGRES_DB:-payr}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-payr} -d ${POSTGRES_DB:-payr}",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks:
-      - devnet
-
-  # ---------------------------------------------------------------------------
-  # Azure Service Bus emulator (depends on mssql below)
-  # ---------------------------------------------------------------------------
-  servicebus:
-    image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
-    pull_policy: always
-    volumes:
-      # Entity configuration (queues / topics / subscriptions)
-      - ./servicebus-config.json:/ServiceBus_Emulator/ConfigFiles/Config.json
-    ports:
-      - "${SB_AMQP_PORT:-5672}:5672" # AMQP
-      - "${SB_HTTP_PORT:-5300}:5300" # management / health
-    environment:
-      SQL_SERVER: mssql
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
-      ACCEPT_EULA: ${ACCEPT_EULA}
-      EMULATOR_HTTP_PORT: ${SB_HTTP_PORT:-5300}
-      SQL_WAIT_INTERVAL: ${SQL_WAIT_INTERVAL:-15}
-    depends_on:
-      mssql:
-        condition: service_started
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -fsS http://localhost:${SB_HTTP_PORT:-5300}/health || exit 1",
-        ]
-      interval: 15s
-      timeout: 5s
-      retries: 20
-      start_period: 60s
-    networks:
-      devnet:
-        aliases:
-          - sb-emulator
-
-  # SQL Server backing store for the Service Bus emulator (not exposed)
-  mssql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    environment:
-      ACCEPT_EULA: ${ACCEPT_EULA}
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
-    networks:
-      - devnet
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${MSSQL_SA_PASSWORD}" -C -Q ''SELECT 1'' || exit 1',
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 30s
-
   # ---------------------------------------------------------------------------
   # Temporal dev server (gRPC + Web UI in one container)
   # ---------------------------------------------------------------------------
@@ -132,32 +46,6 @@ services:
       timeout: 5s
       retries: 20
       start_period: 15s
-    networks:
-      - devnet
-
-  # ---------------------------------------------------------------------------
-  # Redis (Valkey) — local stand-in for Azure Cache for Redis
-  # ---------------------------------------------------------------------------
-  redis:
-    image: docker.io/valkey/valkey:8
-    restart: unless-stopped
-    command:
-      - valkey-server
-      - --requirepass
-      - ${REDIS_PASSWORD:-payr}
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "valkey-cli -a ${REDIS_PASSWORD:-payr} ping | grep -q PONG",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
     networks:
       - devnet
 
@@ -305,8 +193,6 @@ networks:
     driver: bridge
 
 volumes:
-  postgres-data:
-  redis-data:
   temporal-data:
   worker-nuget:
   web-nuget:

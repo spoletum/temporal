@@ -1,18 +1,14 @@
 # PayR.Temporal
 
 Local development environment for PayR workflows built on [Temporal](https://temporal.io).
-Spins up the full backing stack (PostgreSQL, Azure Service Bus emulator, Redis, Temporal dev server)
-plus three .NET workers and a Blazor web UI, all with hot-reload, via Podman Compose.
+Spins up the Temporal dev server (SQLite-backed) plus three .NET workers and a
+Blazor web UI, all with hot-reload, via Podman Compose.
 
 ## What's in the box
 
 | Service | Image | Host port(s) | Purpose |
 |---|---|---|---|
-| `postgres` | `postgres:17` | 5432 | Relational store |
-| `servicebus` | `mcr.microsoft.com/azure-messaging/servicebus-emulator:latest` | 5672 (AMQP), 5300 (mgmt/health) | Azure Service Bus emulator |
-| `mssql` | `mcr.microsoft.com/mssql/server:2022-latest` | — (internal) | Backing store for the Service Bus emulator |
-| `redis` | `valkey/valkey:8` | 6379 | Local stand-in for Azure Cache for Redis |
-| `temporal` | `temporalio/temporal:latest` | 7233 (gRPC), 8233 (UI) | Temporal dev server (CLI + UI bundled) |
+| `temporal` | `temporalio/temporal:latest` | 7233 (gRPC), 8233 (UI) | Temporal dev server (CLI + UI bundled, SQLite persistence) |
 | `worker` | built from `Dockerfile.worker` | — | `PayR.Temporal.SayHello.Worker` (.NET 10, hot-reload via `dotnet watch`) |
 | `validator-worker` | built from `Dockerfile.validator-worker` | — | `PayR.Temporal.Psp.Validator.Worker` (.NET 10, hot-reload) |
 | `payout-worker` | built from `Dockerfile.payout-worker` | — | `PayR.Temporal.Psp.Payout.Worker` (.NET 10, hot-reload) |
@@ -24,19 +20,17 @@ plus three .NET workers and a Blazor web UI, all with hot-reload, via Podman Com
 
 - [Podman](https://podman.io/) ≥ 4.x with `podman compose` support
 - `make`
-- (Optional) `psql` and `redis-cli` on the host for the `make psql` / `make redis-cli` targets
 
 ## Quick start
 
 ```sh
-# 1. Create your local env file from the template and edit it.
+# 1. Create your local env file from the template.
 make env
-#    Set ACCEPT_EULA="Y" and a strong MSSQL_SA_PASSWORD in compose/.env.
 
-# 2. Start the whole stack (worker included).
+# 2. Start the whole stack (workers included).
 make up
 
-# 3. Verify the worker connected.
+# 3. Verify the SayHello worker connected.
 make worker-logs     # Ctrl-C to exit
 
 # 4. Start a sample workflow and see it execute.
@@ -54,14 +48,9 @@ The `.env` file is gitignored — never commit real secrets.
 
 | Variable | Default | Notes |
 |---|---|---|
-| `ACCEPT_EULA` | `N` | Must be `Y` for SQL Server and the Service Bus emulator to start |
-| `MSSQL_SA_PASSWORD` | `ChangeMe!12345` | Must meet SQL Server password policy (≥8 chars, upper/lower/digit/symbol) |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `payr` / `payr` / `payr` | Postgres credentials |
-| `REDIS_PASSWORD` | `payr` | Valkey/Redis AUTH password |
 | `TEMPORAL_GRPC_PORT` / `TEMPORAL_UI_PORT` | `7233` / `8233` | Temporal gRPC and UI ports |
 | `TEMPORAL_UI_URL` | `http://localhost:8233` | Browser-facing Temporal UI URL passed to the Web UI |
 | `WEB_PORT` | `8080` | PayR.Temporal.Web Blazor UI port |
-| `SB_AMQP_PORT` / `SB_HTTP_PORT` | `5672` / `5300` | Service Bus AMQP and management/health ports |
 | `ACCOUNT_MOCK_PORT` / `DOCUMENT_MOCK_PORT` | `8081` / `8082` | Host ports for the PSP mock validation services |
 
 ## Make targets
@@ -89,10 +78,6 @@ Run `make` (or `make help`) for the full list. The most common ones:
 | `make workflow-start` | Start a sample `PayRGreetingWorkflow` execution |
 | `make workflow-show` | List recent workflow executions |
 | `make temporal-ui` | Open the Temporal Web UI in your browser |
-| `make health` | Hit the Service Bus emulator `/health` endpoint |
-| `make psql` | Connect to Postgres via `psql` (host binary) |
-| `make redis-cli` | Connect to Redis via `redis-cli` (host binary) |
-| `make sb-shell` | Shell into the Service Bus emulator container |
 | `make clean` | **Destructive**: stop containers and delete all volumes |
 | `make validate` | Validate the compose file without side effects |
 
@@ -177,12 +162,8 @@ Or open the Web UI at http://localhost:8233.
 
 | Service | Connection string |
 |---|---|
-| PostgreSQL | `Host=localhost;Port=5432;Username=payr;Password=payr;Database=payr` |
-| Redis | `localhost:6379`, password `payr` |
 | Temporal gRPC | `localhost:7233` |
 | Temporal UI | http://localhost:8233 |
-| Service Bus (AMQP) | `Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;` |
-| Service Bus (management) | same, with `:5300` appended to the host |
 
 ## Project layout
 
@@ -190,7 +171,6 @@ Or open the Web UI at http://localhost:8233.
 .
 ├── compose/
 │   ├── podman-compose.yaml      # the full dev stack
-│   ├── servicebus-config.json   # Service Bus entity config (queues/topics)
 │   └── .env.example             # template for compose/.env (gitignored)
 ├── PayR.Temporal.SayHello.Client/
 │   ├── PayR.Temporal.SayHello.Client.csproj
@@ -224,12 +204,6 @@ Or open the Web UI at http://localhost:8233.
 
 ## Notes & caveats
 
-- **Azure Cache for Redis has no official container image.** We use
-  [Valkey](https://valkey.io/) (the open-source Redis successor) for local
-  development. Swap to `redis:7` in the compose file if you prefer.
-- **The Service Bus emulator requires SQL Server** as its backing store, per
-  Microsoft's design. The `mssql` service is internal (not exposed to the host)
-  and its data is ephemeral.
 - **Temporal dev server persistence** uses a SQLite file in the `temporal-data`
   volume, so workflow history survives restarts. `make clean` wipes it.
 - **Image tags**: services use `:latest` for convenience in local dev. For

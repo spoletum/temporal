@@ -6,9 +6,6 @@
 #   make restart    - restart the stack
 #   make logs       - tail logs from all services
 #   make status     - show container status
-#   make psql       - connect to PostgreSQL via psql
-#   make redis-cli  - connect to Redis via redis-cli
-#   make health     - hit the Service Bus emulator /health endpoint
 #   make clean      - down + remove volumes (DESTRUCTIVE: wipes data)
 
 # --- Configuration ----------------------------------------------------------
@@ -20,12 +17,6 @@ ENV_FILE     := compose/.env
 COMPOSE_ARGS := --file $(COMPOSE_FILE) --env-file $(ENV_FILE)
 
 # Service connection defaults (must match compose/.env).
-POSTGRES_USER ?= payr
-POSTGRES_DB   ?= payr
-POSTGRES_PORT ?= 5432
-REDIS_PORT    ?= 6379
-REDIS_PASSWORD ?= payr
-SB_HTTP_PORT  ?= 5300
 TEMPORAL_GRPC_PORT ?= 7233
 TEMPORAL_UI_PORT   ?= 8233
 WEB_PORT           ?= 8080
@@ -78,29 +69,11 @@ ps: status ## Alias for 'status'.
 pull: ## Pull the latest images.
 	$(COMPOSE) $(COMPOSE_ARGS) pull
 
-.PHONY: health
-health: ## Hit the Service Bus emulator /health endpoint.
-	@curl -fsS http://localhost:$(SB_HTTP_PORT)/health && echo "" || echo "Service Bus emulator not reachable on port $(SB_HTTP_PORT)."
-
 .PHONY: temporal-ui
 temporal-ui: ## Open the Temporal Web UI in the default browser.
 	@command -v xdg-open >/dev/null 2>&1 && xdg-open http://localhost:$(TEMPORAL_UI_PORT) \
 		|| command -v open >/dev/null 2>&1 && open http://localhost:$(TEMPORAL_UI_PORT) \
 		|| echo "Temporal UI: http://localhost:$(TEMPORAL_UI_PORT)"
-
-.PHONY: psql
-psql: ## Connect to PostgreSQL with psql (requires psql on the host).
-	@PSQL=$$(command -v psql 2>/dev/null) || { echo "psql not found on host."; exit 1; }; \
-	$$PSQL "host=localhost port=$(POSTGRES_PORT) user=$(POSTGRES_USER) dbname=$(POSTGRES_DB)"
-
-.PHONY: redis-cli
-redis-cli: ## Connect to Redis with redis-cli (requires redis-cli on the host).
-	@REDIS_CLI=$$(command -v redis-cli 2>/dev/null) || { echo "redis-cli not found on host."; exit 1; }; \
-	$$REDIS_CLI -h localhost -p $(REDIS_PORT) -a $(REDIS_PASSWORD)
-
-.PHONY: sb-shell
-sb-shell: ## Open a shell inside the Service Bus emulator container.
-	@$(COMPOSE) $(COMPOSE_ARGS) exec servicebus bash || echo "Service Bus emulator is not running."
 
 .PHONY: worker
 worker: ## Build (if needed) and start the PayR.Temporal.SayHello.Worker service with hot-reload.
@@ -167,7 +140,7 @@ workflow-start: ## Start a workflow execution (defaults to the greeting workflow
 		--workflow-id test-$$(date +%s) --input '"$(WORKFLOW_INPUT)"'
 
 .PHONY: workflow-show
-workflow-show: ## Show the latest workflow execution's history and result.
+workflow-show: ## List recent workflow executions.
 	@podman exec payr-temporal-dev_temporal_1 temporal workflow list --task-queue $(TASK_QUEUE) --limit 5
 
 .PHONY: clean
