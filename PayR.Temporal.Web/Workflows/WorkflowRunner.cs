@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Temporalio.Client;
 
 namespace PayR.Temporal.Web.Workflows;
@@ -63,7 +64,7 @@ public sealed class WorkflowRunner
                 WorkflowId: workflowId,
                 RunId: handle.ResultRunId ?? "",
                 Status: "Completed",
-                ResultText: definition.FormatResult(result),
+                ResultText: FormatResultJson(result),
                 Error: null);
         }
         catch (Exception ex)
@@ -75,6 +76,27 @@ public sealed class WorkflowRunner
                 Status: "Failed",
                 ResultText: null,
                 Error: ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Pretty-prints the workflow result as indented JSON. Falls back to
+    /// <see cref="object.ToString"/> if the result isn't JSON-serializable.
+    /// </summary>
+    private static string FormatResultJson(object? result)
+    {
+        if (result is null) return "(no result)";
+        try
+        {
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+            });
+        }
+        catch
+        {
+            // Not JSON-serializable (e.g. a plain string) — fall back.
+            return result.ToString() ?? "(no result)";
         }
     }
 }
