@@ -1,0 +1,58 @@
+@page "/workflows/{Id}"
+@rendermode InteractiveServer
+@inject WorkflowRunner Runner
+@inject NavigationManager Nav
+
+<PageTitle>@(definition?.DisplayName ?? "Workflow") · PayR.Temporal</PageTitle>
+
+@if (definition is null)
+{
+    <div class="alert alert-warning">
+        No workflow registered with id <code>@Id</code>.
+    </div>
+}
+else
+{
+    <h1>@definition.DisplayName</h1>
+    <p class="text-muted">@definition.Description</p>
+
+    <WorkflowRunnerForm Definition="definition"
+                        OnRun="RunAsync"
+                        LastResult="lastResult"
+                        IsRunning="isRunning" />
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = "";
+
+    private IWorkflowDefinition? definition;
+    private bool isRunning;
+    private WorkflowRunResult? lastResult;
+
+    protected override void OnParametersSet()
+    {
+        // Re-resolve when the route parameter changes (navigating between workflows).
+        var next = Runner.Find(Id);
+        if (next?.Id != definition?.Id)
+        {
+            definition = next;
+            lastResult = null;
+            isRunning = false;
+        }
+    }
+
+    private async Task RunAsync(IReadOnlyDictionary<string, string?> form)
+    {
+        if (definition is null) return;
+        isRunning = true;
+        lastResult = null;
+        try
+        {
+            lastResult = await Runner.RunAsync(definition, form);
+        }
+        finally
+        {
+            isRunning = false;
+        }
+    }
+}

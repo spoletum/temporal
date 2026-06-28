@@ -1,4 +1,6 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@inject IEnumerable<IWorkflowDefinition> Definitions
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">PayR.Temporal</a>
     </div>
@@ -10,8 +12,24 @@
     <nav class="nav flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Workflows
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
         </div>
+
+        @if (Definitions is not null)
+        {
+            <div class="nav-item px-3">
+                <span class="nav-link text-uppercase fw-bold text-muted small">Workflows</span>
+            </div>
+            @foreach (var def in Definitions)
+            {
+                var href = $"/workflows/{def.Id}";
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="@href">
+                        <span class="bi bi-play-circle-nav-menu" aria-hidden="true"></span> @def.DisplayName
+                    </NavLink>
+                </div>
+            }
+        }
     </nav>
 </div>

@@ -1,7 +1,4 @@
 ﻿@page "/"
-@page "/workflows"
-@rendermode InteractiveServer
-@inject WorkflowRunner Runner
 @inject IEnumerable<IWorkflowDefinition> Definitions
 
 <PageTitle>Workflows · PayR.Temporal</PageTitle>
@@ -19,55 +16,17 @@
 }
 else
 {
-    <div class="d-flex flex-wrap gap-2 mb-4">
+    <div class="list-group">
         @foreach (var def in Definitions)
         {
-            var active = Selected?.Id == def.Id;
-            <button type="button"
-                    class="btn @(active ? "btn-primary" : "btn-outline-primary")"
-                    @onclick="() => Select(def)">
-                @def.DisplayName
-            </button>
+            <a class="list-group-item list-group-item-action"
+               href="@($"/workflows/{def.Id}")">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">@def.DisplayName</h5>
+                    <small class="text-muted">@def.WorkflowType</small>
+                </div>
+                <p class="mb-1 text-muted small">@def.Description</p>
+            </a>
         }
     </div>
-
-    if (Selected is not null)
-    {
-        <WorkflowRunnerForm Definition="Selected"
-                            OnRun="RunAsync"
-                            LastResult="lastResult"
-                            IsRunning="isRunning" />
-    }
-}
-
-@code {
-    private IWorkflowDefinition? Selected { get; set; }
-    private bool isRunning;
-    private WorkflowRunResult? lastResult;
-
-    protected override void OnInitialized()
-    {
-        Selected = Definitions.FirstOrDefault();
-    }
-
-    private void Select(IWorkflowDefinition def)
-    {
-        Selected = def;
-        lastResult = null;
-    }
-
-    private async Task RunAsync(IReadOnlyDictionary<string, string?> form)
-    {
-        if (Selected is null) return;
-        isRunning = true;
-        lastResult = null;
-        try
-        {
-            lastResult = await Runner.RunAsync(Selected, form);
-        }
-        finally
-        {
-            isRunning = false;
-        }
-    }
 }
