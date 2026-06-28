@@ -1,0 +1,17 @@
+# Development image for the account validation mock service.
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0
+
+WORKDIR /app
+
+COPY PayR.Temporal.slnx ./
+COPY PayR.Temporal.Psp.TestData/PayR.Temporal.Psp.TestData.csproj ./PayR.Temporal.Psp.TestData/
+COPY PayR.Temporal.Psp.AccountValidationMock/PayR.Temporal.Psp.AccountValidationMock.csproj ./PayR.Temporal.Psp.AccountValidationMock/
+RUN dotnet restore ./PayR.Temporal.Psp.AccountValidationMock/PayR.Temporal.Psp.AccountValidationMock.csproj
+
+ENV DOTNET_USE_POLLING_FILE_WATCHER=1
+ENV DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER=1
+ENV DOTNET_WATCH_SUPPRESS_EMOJIS=1
+ENV ASPNETCORE_ENVIRONMENT=Development
+
+CMD ["dotnet", "watch", "--project", "PayR.Temporal.Psp.AccountValidationMock/PayR.Temporal.Psp.AccountValidationMock.csproj", "run", "--non-interactive", "--urls", "http://0.0.0.0:8080"]

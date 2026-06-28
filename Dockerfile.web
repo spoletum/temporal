@@ -11,6 +11,9 @@ WORKDIR /app
 # Copy all csprojs so project references and package references resolve.
 COPY PayR.Temporal.slnx ./
 COPY PayR.Temporal.SayHello.Client/PayR.Temporal.SayHello.Client.csproj ./PayR.Temporal.SayHello.Client/
+COPY PayR.Temporal.Psp.TestData/PayR.Temporal.Psp.TestData.csproj ./PayR.Temporal.Psp.TestData/
+COPY PayR.Temporal.Psp.Validator.Client/PayR.Temporal.Psp.Validator.Client.csproj ./PayR.Temporal.Psp.Validator.Client/
+COPY PayR.Temporal.Psp.Payout.Client/PayR.Temporal.Psp.Payout.Client.csproj ./PayR.Temporal.Psp.Payout.Client/
 COPY PayR.Temporal.Web/PayR.Temporal.Web.csproj ./PayR.Temporal.Web/
 RUN dotnet restore ./PayR.Temporal.Web/PayR.Temporal.Web.csproj
 

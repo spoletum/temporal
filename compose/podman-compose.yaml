@@ -214,6 +214,92 @@ services:
     networks:
       - devnet
 
+  # ---------------------------------------------------------------------------
+  # Account validation mock service (external HTTP service)
+  # ---------------------------------------------------------------------------
+  account-validation-mock:
+    image: payr-account-validation-mock:dev
+    build:
+      context: ..
+      dockerfile: Dockerfile.account-mock
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    ports:
+      - "${ACCOUNT_MOCK_PORT:-8081}:8080"
+    volumes:
+      - ..:/app
+      - account-mock-nuget:/root/.nuget/packages
+    networks:
+      - devnet
+
+  # ---------------------------------------------------------------------------
+  # Document validation mock service (external HTTP service)
+  # ---------------------------------------------------------------------------
+  document-validation-mock:
+    image: payr-document-validation-mock:dev
+    build:
+      context: ..
+      dockerfile: Dockerfile.document-mock
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    ports:
+      - "${DOCUMENT_MOCK_PORT:-8082}:8080"
+    volumes:
+      - ..:/app
+      - document-mock-nuget:/root/.nuget/packages
+    networks:
+      - devnet
+
+  # ---------------------------------------------------------------------------
+  # PayR.Temporal.Psp.Validator.Worker (hot-reload via dotnet watch)
+  # ---------------------------------------------------------------------------
+  validator-worker:
+    image: payr-validator-worker:dev
+    build:
+      context: ..
+      dockerfile: Dockerfile.validator-worker
+    restart: unless-stopped
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      DOTNET_ENVIRONMENT: Development
+      ACCOUNT_VALIDATION_URL: http://account-validation-mock:8080
+      DOCUMENT_VALIDATION_URL: http://document-validation-mock:8080
+    volumes:
+      - ..:/app
+      - validator-worker-nuget:/root/.nuget/packages
+    depends_on:
+      temporal:
+        condition: service_healthy
+      account-validation-mock:
+        condition: service_started
+      document-validation-mock:
+        condition: service_started
+    networks:
+      - devnet
+
+  # ---------------------------------------------------------------------------
+  # PayR.Temporal.Psp.Payout.Worker (hot-reload via dotnet watch)
+  # ---------------------------------------------------------------------------
+  payout-worker:
+    image: payr-payout-worker:dev
+    build:
+      context: ..
+      dockerfile: Dockerfile.payout-worker
+    restart: unless-stopped
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      DOTNET_ENVIRONMENT: Development
+    volumes:
+      - ..:/app
+      - payout-worker-nuget:/root/.nuget/packages
+    depends_on:
+      temporal:
+        condition: service_healthy
+    networks:
+      - devnet
+
 networks:
   devnet:
     driver: bridge
@@ -224,3 +310,7 @@ volumes:
   temporal-data:
   worker-nuget:
   web-nuget:
+  account-mock-nuget:
+  document-mock-nuget:
+  validator-worker-nuget:
+  payout-worker-nuget:

@@ -1,3 +1,4 @@
+using PayR.Temporal.Psp.Payout.Client;
 using PayR.Temporal.SayHello.Client;
 using PayR.Temporal.Web.Components;
 using PayR.Temporal.Web.Workflows;
@@ -18,6 +19,7 @@ builder.Services.AddSingleton<WorkflowRunner>();
 // is just one line: register its IWorkflowDefinition implementation from
 // the workflow's .Client package.
 builder.Services.AddSingleton<IWorkflowDefinition, SayHelloWorkflowDefinition>();
+builder.Services.AddSingleton<IWorkflowDefinition, PayoutWorkflowDefinition>();
 
 var app = builder.Build();
 

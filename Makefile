@@ -29,6 +29,8 @@ SB_HTTP_PORT  ?= 5300
 TEMPORAL_GRPC_PORT ?= 7233
 TEMPORAL_UI_PORT   ?= 8233
 WEB_PORT           ?= 8080
+ACCOUNT_MOCK_PORT  ?= 8081
+DOCUMENT_MOCK_PORT ?= 8082
 
 # Default target.
 .DEFAULT_GOAL := help
@@ -123,6 +125,34 @@ web-open: ## Open the PayR.Temporal.Web UI in the default browser.
 	@command -v xdg-open >/dev/null 2>&1 && xdg-open http://localhost:$(WEB_PORT) \
 		|| command -v open >/dev/null 2>&1 && open http://localhost:$(WEB_PORT) \
 		|| echo "Web UI: http://localhost:$(WEB_PORT)"
+
+.PHONY: validator-worker
+validator-worker: ## Build (if needed) and start the PSP Validator worker with hot-reload.
+	@$(COMPOSE) $(COMPOSE_ARGS) up -d --build validator-worker
+	@echo "Validator worker starting. Tail logs with: make validator-worker-logs"
+
+.PHONY: validator-worker-logs
+validator-worker-logs: ## Tail the validator worker's logs (Ctrl-C to exit).
+	@$(COMPOSE) $(COMPOSE_ARGS) logs -f validator-worker
+
+.PHONY: payout-worker
+payout-worker: ## Build (if needed) and start the PSP Payout worker with hot-reload.
+	@$(COMPOSE) $(COMPOSE_ARGS) up -d --build payout-worker
+	@echo "Payout worker starting. Tail logs with: make payout-worker-logs"
+
+.PHONY: payout-worker-logs
+payout-worker-logs: ## Tail the payout worker's logs (Ctrl-C to exit).
+	@$(COMPOSE) $(COMPOSE_ARGS) logs -f payout-worker
+
+.PHONY: account-mock
+account-mock: ## Build (if needed) and start the account validation mock service.
+	@$(COMPOSE) $(COMPOSE_ARGS) up -d --build account-validation-mock
+	@echo "Account mock starting on port $(ACCOUNT_MOCK_PORT)."
+
+.PHONY: document-mock
+document-mock: ## Build (if needed) and start the document validation mock service.
+	@$(COMPOSE) $(COMPOSE_ARGS) up -d --build document-validation-mock
+	@echo "Document mock starting on port $(DOCUMENT_MOCK_PORT)."
 
 # Workflow test helpers. The workflow type and task queue must match what
 # the worker registers (see PayR.Temporal.SayHello.Worker/Program.cs).
