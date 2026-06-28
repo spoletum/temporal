@@ -14,6 +14,63 @@ public sealed class PayoutWorkflowDefinition : IWorkflowDefinition
     public string WorkflowType => PayoutWorkflow.Name;
     public string TaskQueue => PayoutWorkflow.TaskQueue;
 
+    public string MarkdownExplanation => @"
+A PSP payout flow that runs a **validator workflow as a child** before
+releasing funds. The validator calls two external mock services (account
+and document validation) which can be slow.
+
+**What it demonstrates:**
+
+- A parent workflow starting a child workflow by name (no reference to the
+  child's implementation — only its `.Client` contract)
+- Racing a child workflow against a 30-second timer
+- Proceeding with a warning when the validator is slow, while the child
+  keeps running in the background (`ParentClosePolicy.Abandon`)
+- Activities calling external HTTP services with a retry policy
+  (3 attempts, 2s fixed interval)
+
+**Try these test cases:**
+
+| From Account | Beneficiary Document | Expected outcome |
+|---|---|---|
+| `123456789` | `ABC123456` | Completed (both validations pass) |
+| `111111111` | `ABC123456` | Failed (account is closed) |
+| `222222222` | `ABC123456` | CompletedWithWarning (account service times out) |
+| `123456789` | `FAIL00001` | Failed (document is blacklisted) |
+| `999999999` | `ABC123456` | Failed (account not found) |
+";
+
+    public string MermaidDiagram => @"
+sequenceDiagram
+    participant UI as Web UI
+    participant T as Temporal
+    participant PW as Payout Workflow
+    participant VW as Validator Workflow
+    participant AM as Account Mock
+    participant DM as Document Mock
+
+    UI->>T: Start PspPayoutWorkflow(input)
+    T->>PW: Schedule workflow task
+    PW->>T: StartChildWorkflow(ValidatorWorkflow)
+    T->>VW: Schedule child workflow task
+    par Account validation
+        VW->>AM: POST /validate/account
+        AM-->>VW: valid/invalid/timeout
+    and Document validation
+        VW->>DM: POST /validate/document
+        DM-->>VW: valid/invalid/timeout
+    end
+    VW-->>T: ValidatorResult
+    alt Validator completes within 30s
+        T-->>PW: ValidatorResult
+        PW-->>T: Payout Completed
+    else 30s timer wins
+        PW-->>T: Payout CompletedWithWarning
+        Note over VW: still running in background
+    end
+    T-->>UI: PayoutResult
+";
+
     public IReadOnlyList<WorkflowField> Fields { get; } =
     [
         new WorkflowField(

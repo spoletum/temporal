@@ -18,6 +18,28 @@
     <Routes />
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        // Initialise Mermaid once the script loads.
+        window.addEventListener('load', function () {
+            if (window.mermaid) {
+                window.mermaid.initialize({ startOnLoad: false, theme: 'default' });
+            }
+        });
+        // Render a specific mermaid diagram by element id.
+        window.mermaid = window.mermaid || {};
+        window.mermaid.run = async function (elementId) {
+            if (!window.mermaid || !window.mermaid.render) return;
+            var el = document.getElementById(elementId);
+            if (!el) return;
+            try {
+                var { svg } = await window.mermaid.render(elementId + '-svg', el.textContent);
+                el.innerHTML = svg;
+            } catch (e) {
+                el.innerHTML = '<pre class="text-danger">' + e.message + '</pre>';
+            }
+        };
+    </script>
 </body>
 
 </html>

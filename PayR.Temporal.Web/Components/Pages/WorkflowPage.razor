@@ -16,6 +16,8 @@ else
     <h1>@definition.DisplayName</h1>
     <p class="text-muted">@definition.Description</p>
 
+    <WorkflowExplanation Definition="definition" />
+
     <WorkflowRunnerForm Definition="definition"
                         OnRun="RunAsync"
                         LastResult="lastResult"

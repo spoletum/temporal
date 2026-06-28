@@ -14,6 +14,32 @@ public sealed class SayHelloWorkflowDefinition : IWorkflowDefinition
     public string WorkflowType => SayHelloWorkflow.Name;
     public string TaskQueue => SayHelloWorkflow.TaskQueue;
 
+    public string MarkdownExplanation => @"
+This is the simplest possible Temporal workflow: a single activity that
+greets a name.
+
+**What it demonstrates:**
+
+- A workflow with one activity
+- The round-trip from UI → Temporal → worker → activity → result
+- The shared `SayHelloInput` contract between the worker and the UI
+";
+
+    public string MermaidDiagram => @"
+sequenceDiagram
+    participant UI as Web UI
+    participant T as Temporal
+    participant W as Worker
+    participant A as SayHello Activity
+
+    UI->>T: Start PayRGreetingWorkflow(name)
+    T->>W: Schedule workflow task
+    W->>A: ExecuteActivity SayHello(name)
+    A-->>W: ""Hello, {name}!""
+    W-->>T: Complete workflow
+    T-->>UI: Result
+";
+
     public IReadOnlyList<WorkflowField> Fields { get; } =
     [
         new WorkflowField(

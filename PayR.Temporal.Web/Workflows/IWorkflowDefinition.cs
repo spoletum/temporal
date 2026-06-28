@@ -13,8 +13,20 @@ public interface IWorkflowDefinition
     /// <summary>Human-friendly name shown in the UI.</summary>
     string DisplayName { get; }
 
-    /// <summary>Short description shown under the name.</summary>
+    /// <summary>Short one-line description shown under the name.</summary>
     string Description { get; }
+
+    /// <summary>
+    /// Longer markdown-formatted explanation of what this demo shows and why.
+    /// Rendered on the workflow's page above the form.
+    /// </summary>
+    string MarkdownExplanation { get; }
+
+    /// <summary>
+    /// Mermaid diagram source (without the surrounding ```mermaid fence) that
+    /// visualises the workflow. Rendered on the workflow's page.
+    /// </summary>
+    string MermaidDiagram { get; }
 
     /// <summary>Temporal workflow type name the worker registers.</summary>
     string WorkflowType { get; }

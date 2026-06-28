@@ -1,0 +1,34 @@
+@inject IJSRuntime JS
+
+<div class="workflow-explanation mb-4">
+    <div class="markdown-body mb-3">
+        @((MarkupString)RenderedMarkdown)
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Definition.MermaidDiagram))
+    {
+        <h5 class="mt-4 mb-2">Flow</h5>
+        <div class="card">
+            <div class="card-body">
+                <div class="mermaid" id="@diagramId">@Definition.MermaidDiagram</div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IWorkflowDefinition Definition { get; set; } = default!;
+
+    private string diagramId => $"mermaid-{Definition.Id}";
+    private string RenderedMarkdown => Markdown.ToHtml(
+        Definition.MarkdownExplanation ?? "",
+        new MarkdownPipelineBuilder().UseAdvancedExtensions().Build());
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !string.IsNullOrWhiteSpace(Definition.MermaidDiagram))
+        {
+            await JS.InvokeVoidAsync("mermaid.run", diagramId);
+        }
+    }
+}
