@@ -40,7 +40,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "temporal operator cluster describe --address localhost:7233 | grep -q cluster_name || exit 1",
+          "temporal operator cluster describe --address localhost:7233 | grep -q ClusterName || exit 1",
         ]
       interval: 10s
       timeout: 5s

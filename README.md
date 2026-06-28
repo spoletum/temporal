@@ -127,7 +127,10 @@ dotnet run --project PayR.Temporal.Psp.Payout.Worker
 
 The Validator worker also reads `ACCOUNT_VALIDATION_URL` (default
 `http://localhost:8081`) and `DOCUMENT_VALIDATION_URL` (default
-`http://localhost:8082`) when running on the host.
+`http://localhost:8082`) when running on the host. Inside the compose network
+these are set to the in-network service names
+(`http://account-validation-mock:8080` / `http://document-validation-mock:8080`)
+— the `localhost` defaults only apply to host-side `dotnet run`.
 
 ### Connecting to Temporal from your own code
 
@@ -208,10 +211,13 @@ Or open the Web UI at http://localhost:8233.
   volume, so workflow history survives restarts. `make clean` wipes it.
 - **Image tags**: services use `:latest` for convenience in local dev. For
   reproducible builds across machines, consider pinning specific tags.
-- **Worker container start**: due to a podman compose quirk with
-  `depends_on: condition: service_healthy`, `make up` may leave the worker in
-  "Created" state. Run `podman start payr-temporal-dev_worker_1` (or `make worker`)
-  to start it.
+- **Temporal healthcheck**: the `temporal` container exposes a healthcheck
+  (`temporal operator cluster describe ... | grep -q ClusterName`) and every
+  worker / web service uses `depends_on: temporal: condition: service_healthy`,
+  so nothing else starts until Temporal is actually reachable. If `make status`
+  shows `temporal` as `unhealthy` and the workers stuck in `Created`, check
+  `podman logs payr-temporal-dev_temporal_1` and the healthcheck output — the
+  grep pattern must match the `cluster describe` output exactly.
 
 ## License
 
