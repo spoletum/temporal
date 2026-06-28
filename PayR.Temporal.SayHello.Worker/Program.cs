@@ -9,6 +9,7 @@ using Temporalio.Workflows;
 // PayR.Temporal.SayHello.Client, shared with callers.
 
 var temporalAddress = Environment.GetEnvironmentVariable("TEMPORAL_ADDRESS") ?? "localhost:7233";
+var temporalNamespace = Environment.GetEnvironmentVariable("TEMPORAL_NAMESPACE") ?? "default";
 
 var activities = new PayRActivities();
 var workerOptions = new TemporalWorkerOptions(taskQueue: SayHelloWorkflow.TaskQueue)
@@ -16,7 +17,10 @@ var workerOptions = new TemporalWorkerOptions(taskQueue: SayHelloWorkflow.TaskQu
     .AddWorkflow<PayRGreetingWorkflow>();
 
 using var worker = new TemporalWorker(
-    await TemporalClient.ConnectAsync(new TemporalClientConnectOptions(temporalAddress)),
+    await TemporalClient.ConnectAsync(new TemporalClientConnectOptions(temporalAddress)
+    {
+        Namespace = temporalNamespace,
+    }),
     workerOptions);
 
 // Run until cancelled (Ctrl+C).
@@ -27,7 +31,7 @@ Console.CancelKeyPress += (_, e) =>
     cts.Cancel();
 };
 
-Console.WriteLine($"PayR.Temporal.SayHello.Worker starting on task queue '{SayHelloWorkflow.TaskQueue}' (connecting to {temporalAddress})...");
+Console.WriteLine($"PayR.Temporal.SayHello.Worker starting on task queue '{SayHelloWorkflow.TaskQueue}' (namespace '{temporalNamespace}', connecting to {temporalAddress})...");
 await worker.ExecuteAsync(cts.Token);
 Console.WriteLine("Worker stopped.");
 

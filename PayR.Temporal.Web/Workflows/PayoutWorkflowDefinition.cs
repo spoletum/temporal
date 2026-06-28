@@ -11,6 +11,7 @@ public sealed class PayoutWorkflowDefinition : IWorkflowDefinition
     public string Id => "payout";
     public string DisplayName => "Payout";
     public string Description => "Executes a payout after running the validator workflow as a child.";
+    public string Namespace => "payout";
     public string WorkflowType => PayoutWorkflow.Name;
     public string TaskQueue => PayoutWorkflow.TaskQueue;
 

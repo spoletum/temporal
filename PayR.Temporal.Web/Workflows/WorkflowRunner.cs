@@ -38,7 +38,7 @@ public sealed class WorkflowRunner
         IReadOnlyDictionary<string, string?> form,
         CancellationToken cancellationToken = default)
     {
-        var client = await _clientProvider.GetClientAsync(cancellationToken).ConfigureAwait(false);
+        var client = await _clientProvider.GetClientAsync(definition.Namespace, cancellationToken).ConfigureAwait(false);
 
         var input = definition.BuildInput(form);
         var workflowId = $"{definition.Id}-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmssfff}";

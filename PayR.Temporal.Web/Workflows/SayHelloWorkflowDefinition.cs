@@ -11,6 +11,7 @@ public sealed class SayHelloWorkflowDefinition : IWorkflowDefinition
     public string Id => "say-hello";
     public string DisplayName => "Say Hello";
     public string Description => "Greets a name via the PayRGreetingWorkflow activity.";
+    public string Namespace => "say-hello";
     public string WorkflowType => SayHelloWorkflow.Name;
     public string TaskQueue => SayHelloWorkflow.TaskQueue;
 

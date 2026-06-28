@@ -11,6 +11,7 @@ using Temporalio.Workflows;
 // document-validation-mock) which bake in the timeout behaviour.
 
 var temporalAddress = Environment.GetEnvironmentVariable("TEMPORAL_ADDRESS") ?? "localhost:7233";
+var temporalNamespace = Environment.GetEnvironmentVariable("TEMPORAL_NAMESPACE") ?? "default";
 var accountServiceUrl = Environment.GetEnvironmentVariable("ACCOUNT_VALIDATION_URL") ?? "http://localhost:8081";
 var documentServiceUrl = Environment.GetEnvironmentVariable("DOCUMENT_VALIDATION_URL") ?? "http://localhost:8082";
 
@@ -20,7 +21,10 @@ var workerOptions = new TemporalWorkerOptions(taskQueue: ValidatorWorkflow.TaskQ
     .AddWorkflow<ValidatorWorkflowImpl>();
 
 using var worker = new TemporalWorker(
-    await TemporalClient.ConnectAsync(new TemporalClientConnectOptions(temporalAddress)),
+    await TemporalClient.ConnectAsync(new TemporalClientConnectOptions(temporalAddress)
+    {
+        Namespace = temporalNamespace,
+    }),
     workerOptions);
 
 using var cts = new CancellationTokenSource();
@@ -30,7 +34,7 @@ Console.CancelKeyPress += (_, e) =>
     cts.Cancel();
 };
 
-Console.WriteLine($"PayR.Temporal.Psp.Validator.Worker starting on task queue '{ValidatorWorkflow.TaskQueue}' (connecting to {temporalAddress})...");
+Console.WriteLine($"PayR.Temporal.Psp.Validator.Worker starting on task queue '{ValidatorWorkflow.TaskQueue}' (namespace '{temporalNamespace}', connecting to {temporalAddress})...");
 await worker.ExecuteAsync(cts.Token);
 Console.WriteLine("Validator worker stopped.");
 

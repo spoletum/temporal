@@ -53,6 +53,29 @@ The `.env` file is gitignored — never commit real secrets.
 | `WEB_PORT` | `8080` | PayR.Temporal.Web Blazor UI port |
 | `ACCOUNT_MOCK_PORT` / `DOCUMENT_MOCK_PORT` | `8081` / `8082` | Host ports for the PSP mock validation services |
 
+## Namespaces
+
+The dev server registers three namespaces at launch (via repeated
+`--namespace` flags in `compose/podman-compose.yaml`):
+
+| Namespace | Workflows | Workers |
+|---|---|---|
+| `default` | (none — reserved for ad-hoc CLI use) | — |
+| `say-hello` | `PayRGreetingWorkflow` | `PayR.Temporal.SayHello.Worker` |
+| `payout` | `PspPayoutWorkflow`, `PspValidatorWorkflow` | `PayR.Temporal.Psp.Payout.Worker`, `PayR.Temporal.Psp.Validator.Worker` |
+
+Payout and Validator share the `payout` namespace because Payout starts
+Validator as a child workflow; the child inherits the parent's namespace
+unless `ChildWorkflowOptions.Namespace` is set, so keeping them together
+avoids cross-namespace child workflow plumbing. SayHello is independent
+and lives in its own namespace.
+
+Workers read `TEMPORAL_NAMESPACE` from the environment (defaults to
+`default` when running on the host without it set). The Web UI does not
+bind a single namespace — each `IWorkflowDefinition` declares its own
+`Namespace` property, and `TemporalClientProvider` builds one cached
+client per namespace on demand.
+
 ## Make targets
 
 Run `make` (or `make help`) for the full list. The most common ones:
@@ -85,11 +108,11 @@ Run `make` (or `make help`) for the full list. The most common ones:
 
 The stack ships three Temporal workers, each in its own project:
 
-| Worker | Project | Task queue | Workflows |
-|---|---|---|---|
-| SayHello | `PayR.Temporal.SayHello.Worker` | `payr-task-queue` | `PayRGreetingWorkflow` (sample) |
-| Validator | `PayR.Temporal.Psp.Validator.Worker` | `psp-validator-task-queue` | `PspValidatorWorkflow` |
-| Payout | `PayR.Temporal.Psp.Payout.Worker` | `psp-payout-task-queue` | `PspPayoutWorkflow` (starts `PspValidatorWorkflow` as a child) |
+| Worker | Project | Namespace | Task queue | Workflows |
+|---|---|---|---|---|
+| SayHello | `PayR.Temporal.SayHello.Worker` | `say-hello` | `payr-task-queue` | `PayRGreetingWorkflow` (sample) |
+| Validator | `PayR.Temporal.Psp.Validator.Worker` | `payout` | `psp-validator-task-queue` | `PspValidatorWorkflow` |
+| Payout | `PayR.Temporal.Psp.Payout.Worker` | `payout` | `psp-payout-task-queue` | `PspPayoutWorkflow` (starts `PspValidatorWorkflow` as a child) |
 
 The **SayHello** worker is a placeholder sample — a single activity that
 greets a name. The **Validator** worker runs account + document validation
@@ -148,9 +171,11 @@ The `temporal` CLI is bundled inside the dev server container. The Makefile
 wraps the common invocations:
 
 ```sh
-make workflow-start                              # starts PayRGreetingWorkflow with input "World"
-make workflow-start WORKFLOW_INPUT=Alice         # custom input
-make workflow-show                               # list recent executions
+make workflow-start                                  # starts PayRGreetingWorkflow with input "World" (namespace say-hello)
+make workflow-start WORKFLOW_INPUT=Alice             # custom input
+make workflow-start NAMESPACE=payout WORKFLOW_TYPE=PspPayoutWorkflow TASK_QUEUE=psp-payout-task-queue WORKFLOW_INPUT='{"fromAccount":"123456789","currency":"USD","amount":100.00,"beneficiaryName":"Jane Doe","beneficiaryDocument":"ABC123456","beneficiaryAccount":"987654321"}'
+make workflow-show                                   # list recent executions in the default namespace (say-hello)
+make workflow-show NAMESPACE=payout                  # list executions in the payout namespace
 ```
 
 To inspect a specific execution in detail, run the CLI directly:

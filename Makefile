@@ -132,16 +132,18 @@ document-mock: ## Build (if needed) and start the document validation mock servi
 WORKFLOW_TYPE  ?= PayRGreetingWorkflow
 TASK_QUEUE      ?= payr-task-queue
 WORKFLOW_INPUT  ?= World
+NAMESPACE       ?= say-hello
 
 .PHONY: workflow-start
 workflow-start: ## Start a workflow execution (defaults to the greeting workflow).
 	@podman exec payr-temporal-dev_temporal_1 temporal workflow start \
+		--namespace $(NAMESPACE) \
 		--task-queue $(TASK_QUEUE) --type $(WORKFLOW_TYPE) \
 		--workflow-id test-$$(date +%s) --input '"$(WORKFLOW_INPUT)"'
 
 .PHONY: workflow-show
 workflow-show: ## List recent workflow executions.
-	@podman exec payr-temporal-dev_temporal_1 temporal workflow list --task-queue $(TASK_QUEUE) --limit 5
+	@podman exec payr-temporal-dev_temporal_1 temporal workflow list --namespace $(NAMESPACE) --task-queue $(TASK_QUEUE) --limit 5
 
 .PHONY: clean
 clean: ## DESTRUCTIVE: stop containers and delete volumes (wipes all data).

@@ -10,12 +10,16 @@ using Temporalio.Workflows;
 // continues running in the background (ParentClosePolicy.Abandon).
 
 var temporalAddress = Environment.GetEnvironmentVariable("TEMPORAL_ADDRESS") ?? "localhost:7233";
+var temporalNamespace = Environment.GetEnvironmentVariable("TEMPORAL_NAMESPACE") ?? "default";
 
 var workerOptions = new TemporalWorkerOptions(taskQueue: PayoutWorkflow.TaskQueue)
     .AddWorkflow<PayoutWorkflowImpl>();
 
 using var worker = new TemporalWorker(
-    await TemporalClient.ConnectAsync(new TemporalClientConnectOptions(temporalAddress)),
+    await TemporalClient.ConnectAsync(new TemporalClientConnectOptions(temporalAddress)
+    {
+        Namespace = temporalNamespace,
+    }),
     workerOptions);
 
 using var cts = new CancellationTokenSource();
@@ -25,7 +29,7 @@ Console.CancelKeyPress += (_, e) =>
     cts.Cancel();
 };
 
-Console.WriteLine($"PayR.Temporal.Psp.Payout.Worker starting on task queue '{PayoutWorkflow.TaskQueue}' (connecting to {temporalAddress})...");
+Console.WriteLine($"PayR.Temporal.Psp.Payout.Worker starting on task queue '{PayoutWorkflow.TaskQueue}' (namespace '{temporalNamespace}', connecting to {temporalAddress})...");
 await worker.ExecuteAsync(cts.Token);
 Console.WriteLine("Payout worker stopped.");
 

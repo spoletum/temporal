@@ -28,6 +28,9 @@ public interface IWorkflowDefinition
     /// </summary>
     string MermaidDiagram { get; }
 
+    /// <summary>Temporal namespace the workflow should be started in.</summary>
+    string Namespace { get; }
+
     /// <summary>Temporal workflow type name the worker registers.</summary>
     string WorkflowType { get; }
 
