@@ -171,6 +171,12 @@ Or open the Web UI at http://localhost:8233.
 .
 ├── compose/
 │   ├── podman-compose.yaml      # the full dev stack
+│   ├── Dockerfile.worker            # dev image for the SayHello worker (dotnet watch)
+│   ├── Dockerfile.validator-worker  # dev image for the Validator worker (dotnet watch)
+│   ├── Dockerfile.payout-worker     # dev image for the Payout worker (dotnet watch)
+│   ├── Dockerfile.account-mock      # dev image for the account validation mock
+│   ├── Dockerfile.document-mock     # dev image for the document validation mock
+│   ├── Dockerfile.web               # dev image for the web UI (dotnet watch)
 │   └── .env.example             # template for compose/.env (gitignored)
 ├── PayR.Temporal.SayHello.Client/
 │   ├── PayR.Temporal.SayHello.Client.csproj
@@ -191,12 +197,6 @@ Or open the Web UI at http://localhost:8233.
 │   ├── Program.cs
 │   ├── Components/              # Blazor UI (Workflows page, form, layout)
 │   └── Workflows/               # IWorkflowDefinition + SayHello/Payout adapters
-├── Dockerfile.worker            # dev image for the SayHello worker (dotnet watch)
-├── Dockerfile.validator-worker  # dev image for the Validator worker (dotnet watch)
-├── Dockerfile.payout-worker     # dev image for the Payout worker (dotnet watch)
-├── Dockerfile.account-mock      # dev image for the account validation mock
-├── Dockerfile.document-mock     # dev image for the document validation mock
-├── Dockerfile.web               # dev image for the web UI (dotnet watch)
 ├── Makefile                     # orchestration helpers
 ├── PayR.Temporal.slnx           # .NET solution
 └── .gitignore

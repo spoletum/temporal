@@ -56,7 +56,7 @@ services:
     image: payr-temporal-worker:dev
     build:
       context: ..
-      dockerfile: Dockerfile.worker
+      dockerfile: compose/Dockerfile.worker
     restart: unless-stopped
     environment:
       TEMPORAL_ADDRESS: temporal:7233
@@ -79,7 +79,7 @@ services:
     image: payr-temporal-web:dev
     build:
       context: ..
-      dockerfile: Dockerfile.web
+      dockerfile: compose/Dockerfile.web
     restart: unless-stopped
     environment:
       TEMPORAL_ADDRESS: temporal:7233
@@ -109,7 +109,7 @@ services:
     image: payr-account-validation-mock:dev
     build:
       context: ..
-      dockerfile: Dockerfile.account-mock
+      dockerfile: compose/Dockerfile.account-mock
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -128,7 +128,7 @@ services:
     image: payr-document-validation-mock:dev
     build:
       context: ..
-      dockerfile: Dockerfile.document-mock
+      dockerfile: compose/Dockerfile.document-mock
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -147,7 +147,7 @@ services:
     image: payr-validator-worker:dev
     build:
       context: ..
-      dockerfile: Dockerfile.validator-worker
+      dockerfile: compose/Dockerfile.validator-worker
     restart: unless-stopped
     environment:
       TEMPORAL_ADDRESS: temporal:7233
@@ -174,7 +174,7 @@ services:
     image: payr-payout-worker:dev
     build:
       context: ..
-      dockerfile: Dockerfile.payout-worker
+      dockerfile: compose/Dockerfile.payout-worker
     restart: unless-stopped
     environment:
       TEMPORAL_ADDRESS: temporal:7233
