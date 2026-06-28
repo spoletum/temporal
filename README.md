@@ -2,7 +2,7 @@
 
 Local development environment for PayR workflows built on [Temporal](https://temporal.io).
 Spins up the full backing stack (PostgreSQL, Azure Service Bus emulator, Redis, Temporal dev server)
-plus a .NET worker with hot-reload, all via Podman Compose.
+plus three .NET workers and a Blazor web UI, all with hot-reload, via Podman Compose.
 
 ## What's in the box
 
@@ -14,6 +14,10 @@ plus a .NET worker with hot-reload, all via Podman Compose.
 | `redis` | `valkey/valkey:8` | 6379 | Local stand-in for Azure Cache for Redis |
 | `temporal` | `temporalio/temporal:latest` | 7233 (gRPC), 8233 (UI) | Temporal dev server (CLI + UI bundled) |
 | `worker` | built from `Dockerfile.worker` | — | `PayR.Temporal.SayHello.Worker` (.NET 10, hot-reload via `dotnet watch`) |
+| `validator-worker` | built from `Dockerfile.validator-worker` | — | `PayR.Temporal.Psp.Validator.Worker` (.NET 10, hot-reload) |
+| `payout-worker` | built from `Dockerfile.payout-worker` | — | `PayR.Temporal.Psp.Payout.Worker` (.NET 10, hot-reload) |
+| `account-validation-mock` | built from `Dockerfile.account-mock` | 8081 | Mock external service for account validation |
+| `document-validation-mock` | built from `Dockerfile.document-mock` | 8082 | Mock external service for document validation |
 | `web` | built from `Dockerfile.web` | 8080 | `PayR.Temporal.Web` Blazor UI (.NET 10, hot-reload via `dotnet watch`) |
 
 ## Prerequisites
@@ -55,8 +59,10 @@ The `.env` file is gitignored — never commit real secrets.
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `payr` / `payr` / `payr` | Postgres credentials |
 | `REDIS_PASSWORD` | `payr` | Valkey/Redis AUTH password |
 | `TEMPORAL_GRPC_PORT` / `TEMPORAL_UI_PORT` | `7233` / `8233` | Temporal gRPC and UI ports |
+| `TEMPORAL_UI_URL` | `http://localhost:8233` | Browser-facing Temporal UI URL passed to the Web UI |
 | `WEB_PORT` | `8080` | PayR.Temporal.Web Blazor UI port |
 | `SB_AMQP_PORT` / `SB_HTTP_PORT` | `5672` / `5300` | Service Bus AMQP and management/health ports |
+| `ACCOUNT_MOCK_PORT` / `DOCUMENT_MOCK_PORT` | `8081` / `8082` | Host ports for the PSP mock validation services |
 
 ## Make targets
 
@@ -69,8 +75,14 @@ Run `make` (or `make help`) for the full list. The most common ones:
 | `make restart` | Restart all services |
 | `make status` | Show container status |
 | `make logs` | Tail logs from all services |
-| `make worker` | (Re)build and start the worker with hot-reload |
-| `make worker-logs` | Tail worker logs |
+| `make worker` | (Re)build and start the SayHello worker with hot-reload |
+| `make worker-logs` | Tail SayHello worker logs |
+| `make validator-worker` | (Re)build and start the PSP Validator worker with hot-reload |
+| `make validator-worker-logs` | Tail validator worker logs |
+| `make payout-worker` | (Re)build and start the PSP Payout worker with hot-reload |
+| `make payout-worker-logs` | Tail payout worker logs |
+| `make account-mock` | (Re)build and start the account validation mock service |
+| `make document-mock` | (Re)build and start the document validation mock service |
 | `make web` | (Re)build and start the Blazor Web UI with hot-reload |
 | `make web-logs` | Tail Web UI logs |
 | `make web-open` | Open the Web UI in your browser |
@@ -84,37 +96,57 @@ Run `make` (or `make help`) for the full list. The most common ones:
 | `make clean` | **Destructive**: stop containers and delete all volumes |
 | `make validate` | Validate the compose file without side effects |
 
-## The worker
+## The workers
 
-`PayR.Temporal.SayHello.Worker` is a .NET 10 console app that registers a single
-sample workflow (`PayRGreetingWorkflow`) and activity (`SayHello`) on the
-`payr-task-queue` task queue. It's a placeholder — replace it with real PayR
-workflows as the project grows.
+The stack ships three Temporal workers, each in its own project:
+
+| Worker | Project | Task queue | Workflows |
+|---|---|---|---|
+| SayHello | `PayR.Temporal.SayHello.Worker` | `payr-task-queue` | `PayRGreetingWorkflow` (sample) |
+| Validator | `PayR.Temporal.Psp.Validator.Worker` | `psp-validator-task-queue` | `PspValidatorWorkflow` |
+| Payout | `PayR.Temporal.Psp.Payout.Worker` | `psp-payout-task-queue` | `PspPayoutWorkflow` (starts `PspValidatorWorkflow` as a child) |
+
+The **SayHello** worker is a placeholder sample — a single activity that
+greets a name. The **Validator** worker runs account + document validation
+activities in parallel (each with a 30s `StartToCloseTimeout` and a 3-attempt,
+2s retry policy), calling the `account-validation-mock` and
+`document-validation-mock` HTTP services. The **Payout** worker starts the
+Validator workflow as a child, races it against a 30s timer, and proceeds with
+a warning if validation doesn't complete in time (the child is abandoned and
+keeps running in the background).
 
 ### Hot-reload
 
-The worker runs inside the container via `dotnet watch`, with the repo root
-bind-mounted at `/app`. Editing any `.cs` file triggers an automatic rebuild
-and restart — typically within ~1 second.
+All workers run inside their containers via `dotnet watch`, with the repo
+root bind-mounted at `/app`. Editing any `.cs` file triggers an automatic
+rebuild and restart — typically within ~1 second.
 
 ```sh
-make worker         # start the worker (builds the image if needed)
-make worker-logs    # watch it run; edit Program.cs and see it restart
+make worker             # start the SayHello worker (builds the image if needed)
+make worker-logs        # watch it run; edit Program.cs and see it restart
+make validator-worker   # start the PSP Validator worker
+make payout-worker      # start the PSP Payout worker
 ```
 
-### Running the worker on the host (without containers)
+### Running a worker on the host (without containers)
 
-If you'd rather run the worker directly with `dotnet run` (e.g. for debugging
+If you'd rather run a worker directly with `dotnet run` (e.g. for debugging
 in your IDE), it falls back to `localhost:7233` when `TEMPORAL_ADDRESS` is
 unset:
 
 ```sh
 dotnet run --project PayR.Temporal.SayHello.Worker
+dotnet run --project PayR.Temporal.Psp.Validator.Worker
+dotnet run --project PayR.Temporal.Psp.Payout.Worker
 ```
+
+The Validator worker also reads `ACCOUNT_VALIDATION_URL` (default
+`http://localhost:8081`) and `DOCUMENT_VALIDATION_URL` (default
+`http://localhost:8082`) when running on the host.
 
 ### Connecting to Temporal from your own code
 
-The worker reads `TEMPORAL_ADDRESS` from the environment. Inside the compose
+Each worker reads `TEMPORAL_ADDRESS` from the environment. Inside the compose
 network this is `temporal:7233`; on the host, use `localhost:7233`.
 
 ```csharp
@@ -166,13 +198,24 @@ Or open the Web UI at http://localhost:8233.
 │   └── SayHelloWorkflow.cs       # workflow name + task queue constants
 ├── PayR.Temporal.SayHello.Worker/
 │   ├── PayR.Temporal.SayHello.Worker.csproj
-│   └── Program.cs               # workflow + activity implementations
+│   └── Program.cs               # sample greeting workflow + activity
+├── PayR.Temporal.Psp.TestData/        # shared PSP mock data (accounts, documents)
+├── PayR.Temporal.Psp.Validator.Client/   # Validator workflow identity constants + contracts
+├── PayR.Temporal.Psp.Validator.Worker/   # Validator workflow + activities (calls the mocks)
+├── PayR.Temporal.Psp.Payout.Client/      # Payout workflow identity constants + contracts
+├── PayR.Temporal.Psp.Payout.Worker/      # Payout workflow (starts Validator as a child)
+├── PayR.Temporal.Psp.AccountValidationMock/  # mock HTTP service: POST /validate/account
+├── PayR.Temporal.Psp.DocumentValidationMock/  # mock HTTP service: POST /validate/document
 ├── PayR.Temporal.Web/
 │   ├── PayR.Temporal.Web.csproj
 │   ├── Program.cs
 │   ├── Components/              # Blazor UI (Workflows page, form, layout)
-│   └── Workflows/               # IWorkflowDefinition + SayHello adapter
-├── Dockerfile.worker            # dev image for the worker (dotnet watch)
+│   └── Workflows/               # IWorkflowDefinition + SayHello/Payout adapters
+├── Dockerfile.worker            # dev image for the SayHello worker (dotnet watch)
+├── Dockerfile.validator-worker  # dev image for the Validator worker (dotnet watch)
+├── Dockerfile.payout-worker     # dev image for the Payout worker (dotnet watch)
+├── Dockerfile.account-mock      # dev image for the account validation mock
+├── Dockerfile.document-mock     # dev image for the document validation mock
 ├── Dockerfile.web               # dev image for the web UI (dotnet watch)
 ├── Makefile                     # orchestration helpers
 ├── PayR.Temporal.slnx           # .NET solution
