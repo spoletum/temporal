@@ -17,9 +17,6 @@ else
     <p class="text-muted">@definition.Description</p>
 
     <div class="row g-4">
-        <div class="col-lg-7">
-            <WorkflowExplanation Definition="definition" />
-        </div>
         <div class="col-lg-5">
             <div class="position-sticky" style="top: 1rem;">
                 <WorkflowRunnerForm Definition="definition"
@@ -27,6 +24,9 @@ else
                                     LastResult="lastResult"
                                     IsRunning="isRunning" />
             </div>
+        </div>
+        <div class="col-lg-7">
+            <WorkflowExplanation Definition="definition" />
         </div>
     </div>
 }
