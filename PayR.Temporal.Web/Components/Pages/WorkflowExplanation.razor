@@ -1,6 +1,6 @@
 @inject IJSRuntime JS
 
-<div class="workflow-explanation mb-4">
+<div class="workflow-explanation">
     <div class="markdown-body mb-3">
         @((MarkupString)RenderedMarkdown)
     </div>
@@ -9,7 +9,7 @@
     {
         <h5 class="mt-4 mb-2">Flow</h5>
         <div class="card">
-            <div class="card-body">
+            <div class="card-body overflow-auto" style="max-height: 60vh;">
                 <div class="mermaid" id="@diagramId">@Definition.MermaidDiagram</div>
             </div>
         </div>
